@@ -1,0 +1,15 @@
+.venv/
+.vscode/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.pyc
+*.pyo
+*.pyd
+.env
+dist/
+build/
+*.egg-info/
+*.md
+scripts/test_*.py
