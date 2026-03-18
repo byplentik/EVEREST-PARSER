@@ -1,4 +1,4 @@
-"""Настройки приложения для последующих этапов реализации."""
+"""Настройки приложения."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from functools import lru_cache
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
 
 
 class Settings(BaseSettings):
@@ -88,7 +89,7 @@ class Settings(BaseSettings):
             "app_name": self.app_name,
             "app_env": self.app_env,
             "log_level": self.log_level,
-            "database_url": self.database_url,
+            "database_url": self.masked_database_url(),
             "uc_headless": self.uc_headless,
             "uc_enable_cdp_events": self.uc_enable_cdp_events,
             "uc_version_main": self.uc_version_main,
@@ -100,6 +101,11 @@ class Settings(BaseSettings):
             "request_delay_seconds": self.request_delay_seconds,
             "max_retries": self.max_retries,
         }
+
+    def masked_database_url(self) -> str:
+        """Вернуть URL подключения к БД без пароля."""
+
+        return make_url(self.database_url).render_as_string(hide_password=True)
 
 
 @lru_cache(maxsize=1)
