@@ -21,6 +21,8 @@ services:
     env_file:
       - path: .env
         required: false
+    volumes:
+      - ./input:/app/input
     depends_on:
       db:
         condition: service_healthy

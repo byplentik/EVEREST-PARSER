@@ -26,9 +26,29 @@ from everest_parser.db.enums import ParserType
 from everest_parser.db.enums import TaskStatus
 
 
-PARSER_TYPE_ENUM = SqlEnum(ParserType, name="parser_type_enum", native_enum=False)
-JOB_STATUS_ENUM = SqlEnum(JobStatus, name="job_status_enum", native_enum=False)
-TASK_STATUS_ENUM = SqlEnum(TaskStatus, name="task_status_enum", native_enum=False)
+def enum_values(enum_cls: type[object]) -> list[str]:
+    """Вернуть список строковых значений enum для SQLAlchemy."""
+
+    return [item.value for item in enum_cls]
+
+PARSER_TYPE_ENUM = SqlEnum(
+    ParserType,
+    name="parser_type_enum",
+    native_enum=False,
+    values_callable=enum_values,
+)
+JOB_STATUS_ENUM = SqlEnum(
+    JobStatus,
+    name="job_status_enum",
+    native_enum=False,
+    values_callable=enum_values,
+)
+TASK_STATUS_ENUM = SqlEnum(
+    TaskStatus,
+    name="task_status_enum",
+    native_enum=False,
+    values_callable=enum_values,
+)
 
 
 class ParseJob(Base):
