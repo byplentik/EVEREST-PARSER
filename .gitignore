@@ -13,4 +13,9 @@ build/
 *.egg-info/
 *.md
 scripts/test_*.py
+input/*.json
+input/*.txt
+input/*.html
+input/*.png
+input/*.js
 input/*.xlsx

@@ -23,10 +23,10 @@ services:
         required: false
     volumes:
       - ./input:/app/input
+    shm_size: "2gb"
     depends_on:
       db:
         condition: service_healthy
-    command: ["everest-parser", "about"]
 
 volumes:
   postgres_data:

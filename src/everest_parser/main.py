@@ -9,26 +9,27 @@ from pathlib import Path
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from everest_parser import __version__
-from everest_parser.config import get_settings
-from everest_parser.db import create_database_schema
-from everest_parser.db import get_declared_table_names
+from everest_parser.browser.kad_bootstrap import KadBootstrapError
+from everest_parser.clients.errors import TransportConfigError
+from everest_parser.clients.errors import TransportError
 from everest_parser.db import ParserType
+from everest_parser.db import create_database_schema
+from everest_parser.services import FedresursJobRunnerError
 from everest_parser.services import JobImportError
+from everest_parser.services import KadJobRunnerError
 from everest_parser.services import create_job_from_xlsx
+from everest_parser.services import run_fedresurs_job
+from everest_parser.services import run_kad_job
+
+
+SUPPORTED_PARSERS = (ParserType.KAD, ParserType.FEDRESURS)
 
 
 def build_cli() -> argparse.ArgumentParser:
-    """Создать CLI-парсер приложения."""
+    """Создать CLI для инициализации БД и запуска парсеров."""
 
     parser = argparse.ArgumentParser(prog="everest-parser")
     subparsers = parser.add_subparsers(dest="command", required=True)
-
-    about_parser = subparsers.add_parser(
-        "about",
-        help="Показать сводку конфигурации приложения.",
-    )
-    about_parser.set_defaults(command="about")
 
     db_parser = subparsers.add_parser(
         "db",
@@ -42,30 +43,24 @@ def build_cli() -> argparse.ArgumentParser:
     )
     db_init_parser.set_defaults(command="db", db_command="init")
 
-    job_parser = subparsers.add_parser(
-        "job",
-        help="Команды для загрузки входного файла в очередь задач.",
+    parse_parser = subparsers.add_parser(
+        "parse",
+        help="Импортировать `.xlsx` и сразу запустить парсер.",
     )
-    job_subparsers = job_parser.add_subparsers(dest="job_command", required=True)
-
-    job_create_parser = job_subparsers.add_parser(
-        "create",
-        help="Создать batch-job и задачи из входного .xlsx файла.",
-    )
-    job_create_parser.add_argument(
+    parse_parser.add_argument(
         "--parser",
         dest="parser_type",
         required=True,
-        choices=[parser_type.value for parser_type in ParserType],
-        help="Тип парсера, для которого подготавливаются задачи.",
+        choices=[parser_type.value for parser_type in SUPPORTED_PARSERS],
+        help="Тип парсера для обработки входного файла.",
     )
-    job_create_parser.add_argument(
+    parse_parser.add_argument(
         "--input",
         dest="input_path",
         required=True,
-        help="Путь к входному .xlsx файлу.",
+        help="Путь к входному `.xlsx` файлу.",
     )
-    job_create_parser.set_defaults(command="job", job_command="create")
+    parse_parser.set_defaults(command="parse")
 
     return parser
 
@@ -76,31 +71,14 @@ def print_payload(payload: dict[str, object], *, stream: object | None = None) -
     print(json.dumps(payload, ensure_ascii=False, indent=2), file=stream or sys.stdout)
 
 
-def handle_about() -> None:
-    """Вывести сводку конфигурации приложения."""
-
-    settings = get_settings()
-    payload = {
-        "name": settings.app_name,
-        "version": __version__,
-        "status": "ready",
-        "declared_tables": get_declared_table_names(),
-        "settings": settings.public_summary(),
-    }
-    print_payload(payload)
-
-
 def handle_db_init() -> None:
     """Создать схему базы данных и вывести результат операции."""
-
-    settings = get_settings()
 
     try:
         created_tables = create_database_schema()
     except SQLAlchemyError as error:
         payload = {
             "status": "error",
-            "database_url": settings.masked_database_url(),
             "error_type": type(error).__name__,
             "error": str(error),
         }
@@ -109,31 +87,39 @@ def handle_db_init() -> None:
 
     payload = {
         "status": "ready",
-        "database_url": settings.masked_database_url(),
         "tables": created_tables,
     }
     print_payload(payload)
 
 
-def handle_job_create(parser_type: str, input_path: str) -> None:
-    """Импортировать входной `.xlsx` в job и очередь задач."""
+def handle_parse(parser_type: str, input_path: str) -> None:
+    """Импортировать `.xlsx` и выполнить выбранный парсер."""
 
     try:
-        summary = create_job_from_xlsx(
-            parser_type=ParserType(parser_type),
+        parser_enum = ParserType(parser_type)
+        import_summary = create_job_from_xlsx(
+            parser_type=parser_enum,
             input_path=Path(input_path),
         )
-    except JobImportError as error:
-        payload = {
-            "status": "error",
-            "parser_type": parser_type,
-            "input_path": input_path,
-            "error_type": type(error).__name__,
-            "error": str(error),
-        }
-        print_payload(payload, stream=sys.stderr)
-        raise SystemExit(1) from error
-    except SQLAlchemyError as error:
+
+        if parser_enum is ParserType.KAD:
+            run_summary = run_kad_job(job_id=import_summary.job_id)
+        elif parser_enum is ParserType.FEDRESURS:
+            run_summary = run_fedresurs_job(job_id=import_summary.job_id)
+        else:
+            raise ValueError(
+                f"Реализация runner пока недоступна для parser={parser_enum.value}."
+            )
+    except (
+        FedresursJobRunnerError,
+        JobImportError,
+        KadJobRunnerError,
+        SQLAlchemyError,
+        TransportError,
+        KadBootstrapError,
+        TransportConfigError,
+        ValueError,
+    ) as error:
         payload = {
             "status": "error",
             "parser_type": parser_type,
@@ -146,7 +132,8 @@ def handle_job_create(parser_type: str, input_path: str) -> None:
 
     payload = {
         "status": "ready",
-        **summary.as_payload(),
+        **import_summary.as_payload(),
+        **run_summary.as_payload(),
     }
     print_payload(payload)
 
@@ -157,16 +144,12 @@ def main() -> None:
     parser = build_cli()
     args = parser.parse_args()
 
-    if args.command == "about":
-        handle_about()
-        return
-
     if args.command == "db" and args.db_command == "init":
         handle_db_init()
         return
 
-    if args.command == "job" and args.job_command == "create":
-        handle_job_create(parser_type=args.parser_type, input_path=args.input_path)
+    if args.command == "parse":
+        handle_parse(parser_type=args.parser_type, input_path=args.input_path)
         return
 
     parser.error("Неизвестная команда CLI.")

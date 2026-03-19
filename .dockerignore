@@ -1,11 +1,12 @@
 .venv
+.venv311
 __pycache__
 *.pyc
 *.pyo
 *.pyd
 .git
 .gitignore
+.chrome-kad-profile
 dist
 build
 *.egg-info
-

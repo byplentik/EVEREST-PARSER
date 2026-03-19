@@ -192,6 +192,10 @@ class FedresursResult(Base):
 
     task: Mapped[ParseTask] = relationship(back_populates="fedresurs_result")
 
+    __table_args__ = (
+        UniqueConstraint("inn", name="uq_fedresurs_results_inn"),
+    )
+
 
 class KadResult(Base):
     """Результат выполнения задачи по `kad.arbitr.ru`."""
@@ -205,7 +209,7 @@ class KadResult(Base):
         unique=True,
         index=True,
     )
-    case_number: Mapped[str] = mapped_column(String(64), nullable=False)
+    case_number: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     document_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     document_name: Mapped[str] = mapped_column(Text, nullable=False)
     raw_payload: Mapped[dict[str, Any] | list[Any] | None] = mapped_column(JSON, nullable=True)
@@ -216,3 +220,7 @@ class KadResult(Base):
     )
 
     task: Mapped[ParseTask] = relationship(back_populates="kad_result")
+
+    __table_args__ = (
+        UniqueConstraint("case_number", name="uq_kad_results_case_number"),
+    )
