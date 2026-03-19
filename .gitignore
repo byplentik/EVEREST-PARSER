@@ -11,7 +11,6 @@ __pycache__/
 dist/
 build/
 *.egg-info/
-*.md
 scripts/test_*.py
 input/*.json
 input/*.txt
