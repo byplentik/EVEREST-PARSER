@@ -87,7 +87,7 @@
 
 ### CLI
 
-Файл: [main.py]()
+Файл: [main.py](src/everest_parser/main.py)
 
 CLI поддерживает две основные команды:
 
@@ -96,7 +96,7 @@ CLI поддерживает две основные команды:
 
 ### Слой импорта входного файла
 
-Файл: [job_import.py]()
+Файл: [job_import.py](src/everest_parser/services/job_import.py)
 
 Отвечает за:
 
@@ -110,8 +110,8 @@ CLI поддерживает две основные команды:
 
 Файлы:
 
-- [fedresurs.py]()
-- [kad.py]()
+- [fedresurs.py](src/everest_parser/parsers/fedresurs.py)
+- [kad.py](src/everest_parser/parsers/kad.py)
 
 В этих файлах находится логика получения и разбора данных с сайтов.
 
@@ -119,8 +119,8 @@ CLI поддерживает две основные команды:
 
 Файлы:
 
-- [fedresurs_runner.py]()
-- [kad_runner.py]()
+- [fedresurs_runner.py](src/everest_parser/services/fedresurs_runner.py)
+- [kad_runner.py](src/everest_parser/services/kad_runner.py)
 
 Runner отвечает за:
 
@@ -131,7 +131,7 @@ Runner отвечает за:
 
 ### Transport layer
 
-Файл: [transports.py]()
+Файл: [transports.py](src/everest_parser/clients/transports.py)
 
 Отвечает за:
 
@@ -145,8 +145,8 @@ Runner отвечает за:
 
 Файлы:
 
-- [kad_bootstrap.py]()
-- [session_manager.py]()
+- [kad_bootstrap.py](src/everest_parser/browser/kad_bootstrap.py)
+- [session_manager.py](src/everest_parser/clients/session_manager.py)
 
 Отвечают за:
 
@@ -159,9 +159,9 @@ Runner отвечает за:
 
 Файлы:
 
-- [models.py]()
-- [session.py]()
-- [schema.py]()
+- [models.py](src/everest_parser/db/models.py)
+- [session.py](src/everest_parser/db/session.py)
+- [schema.py](src/everest_parser/db/schema.py)
 
 ## Структура БД
 
@@ -303,7 +303,7 @@ docker compose run --rm app everest-parser parse --parser fedresurs --input /app
 
 ## Настройки
 
-Файл: [.env.example](c:/Users/Incognitus/Desktop/codes/everest-parser/.env.example)
+Файл: [.env.example](.env.example)
 
 Основные параметры:
 
@@ -317,14 +317,14 @@ docker compose run --rm app everest-parser parse --parser fedresurs --input /app
 
 ## Инфраструктура Docker
 
-Файл: [docker-compose.yml]()
+Файл: [docker-compose.yml](docker-compose.yml)
 
 Состав:
 
 - сервис `db` — PostgreSQL
 - сервис `app` — приложение парсера
 
-Файл: [Dockerfile]()
+Файл: [Dockerfile](Dockerfile)
 
 Контейнер приложения включает:
 
@@ -333,7 +333,7 @@ docker compose run --rm app everest-parser parse --parser fedresurs --input /app
 - `xvfb`
 - зависимости Python из `pyproject.toml`
 
-Файл: [docker-entrypoint.sh]()
+Файл: [docker-entrypoint.sh](docker/docker-entrypoint.sh)
 
 Используется только для запуска виртуального экрана `Xvfb`, который нужен `kad` для browser bootstrap внутри контейнера.
 
@@ -394,4 +394,3 @@ docker compose run --rm app everest-parser parse --parser fedresurs --input /app
 - получает данные с `fedresurs.ru` и `kad.arbitr.ru`
 - сохраняет результаты в PostgreSQL
 - выводит понятные логи и итоговую сводку
-
